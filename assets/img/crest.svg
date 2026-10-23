@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="DIET BHSS Hazratbal Complex 121 crest">
+  <defs>
+    <linearGradient id="crestRing" x1="8" y1="8" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f7a5e"/>
+      <stop offset="1" stop-color="#083f31"/>
+    </linearGradient>
+    <linearGradient id="crestBook" x1="48" y1="52" x2="48" y2="70" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffdf8"/>
+      <stop offset="1" stop-color="#f1ead9"/>
+    </linearGradient>
+  </defs>
+  <circle cx="48" cy="48" r="47" fill="url(#crestRing)"/>
+  <circle cx="48" cy="48" r="40.5" fill="#fbf8f0"/>
+  <circle cx="48" cy="48" r="37.5" fill="none" stroke="#c9822e" stroke-width=".9" opacity=".6"/>
+  <circle cx="48" cy="33.5" r="5.6" fill="#e2a03e"/>
+  <path d="M22.5 50.5 34 37.5l8.6 9.2L51 35l12.7 14.2 6.6-6.3 4.2 7.6Z" fill="#0c5f4a" opacity=".22"/>
+  <path d="M23 54 35 40.5l8.6 9.2L52 38l12.7 14.2 6.6-6.3L77 54Z" fill="#0c5f4a"/>
+  <path d="M27.5 56.5c7.4-2.6 14.2-2.1 20.5 1.6 6.3-3.7 13.1-4.2 20.5-1.6v11.7c-7.4-2.5-14.2-2-20.5 1.7-6.3-3.7-13.1-4.2-20.5-1.7Z" fill="url(#crestBook)" stroke="#0c5f4a" stroke-width="2.1" stroke-linejoin="round"/>
+  <path d="M48 58.1v11.8" stroke="#0c5f4a" stroke-width="1.4" opacity=".65"/>
+  <path d="M31.5 61.2c4.2-.7 8.2-.2 11.7 1.3M64.5 61.2c-4.2-.7-8.2-.2-11.7 1.3M31.5 64.6c4.2-.7 8.2-.1 11.7 1.4M64.5 64.6c-4.2-.7-8.2-.1-11.7 1.4" fill="none" stroke="#0c5f4a" stroke-width="1" stroke-linecap="round" opacity=".38"/>
+  <text x="48" y="80.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="7.6" font-weight="700" letter-spacing="1.8" fill="#0c5f4a">121</text>
+</svg>
