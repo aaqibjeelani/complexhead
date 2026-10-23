@@ -19,6 +19,7 @@ After deployment:
 - Lets anyone open a **read-only view** of a school’s marks sheet.
 - Searches the read-only view by roll number, student name, father’s name, or admission number.
 - Provides **Print sheet** and **CSV** options for the school’s marks table.
+- Shows a **live countdown** to the marks-entry deadline and disables entry automatically once it passes.
 - Clearly states that official report cards are issued by DIET.
 
 ## Project structure
@@ -145,6 +146,22 @@ Any static server works (for example, `npx serve` or the VS Code Live Server ext
 
 All asset paths are relative, so the site works correctly under the `/complexhead/` subpath.
 
+## Entry deadline & countdown
+
+A prominent countdown card sits at the top of the home page and shows the time left until `ENTRY_DEADLINE` (default: 31 October 2026).
+
+- While entry is open, the **Enter marks** links work and the card shows days, hours, minutes, seconds.
+- After the deadline, a global banner appears, every **Enter marks** link becomes a disabled **Entry closed** control, and the card shows *“Marks entry has closed”*.
+- The read-only sheet view, search, sort, CSV and **Print sheet** keep working after entry closes.
+- To re-open or extend entry, change only `window.ENTRY_DEADLINE` in `assets/js/schools.js` (for example `'2026-11-15'`).
+
+The two globals that drive the year and the deadline live at the very top of `assets/js/schools.js`:
+
+```js
+window.COMPLEX_SESSION = '2026';        // session year shown across the site
+window.ENTRY_DEADLINE = '2026-10-31';   // last day marks entry is open (23:59:59 local)
+```
+
 ## Yearly reuse (only two lines to change)
 
 The Google Sheets are reused every academic year. Before the new session:
@@ -169,11 +186,12 @@ The Google Sheets are reused every academic year. Before the new session:
 - The **Print sheet** action prints the tabular school marks sheet. It does not generate an individual report card.
 - Official report cards are issued by DIET.
 
-## Credits
+## Developer
 
 **Developed by Aaqib Jeelani**
 
 - Website: https://aaqibjeelani.github.io/
 - Logo: https://aaqibjeelani.github.io/ajvirus/images/transparentlogo%20aj.png
+- Design, development & maintenance of the Complex 121 marks portal.
 
 DIET BHSS Hazratbal, Complex 121, NIT Entrance Road, Hazratbal, Srinagar, Jammu & Kashmir — 190006.
