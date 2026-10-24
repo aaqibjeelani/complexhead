@@ -15,12 +15,62 @@ After deployment:
 ## What the portal does
 
 - Lists all 11 schools in the complex.
-- Gives each school an **Enter marks** button that opens its editable Google Sheet in a new tab.
-- Lets anyone open a **read-only view** of a school’s marks sheet.
+- **Locks every school behind its own access password**, so one school cannot open or enter another school’s data.
+- Gives each unlocked school an **Enter marks** button that opens its editable Google Sheet in a new tab.
+- Lets an unlocked school open a **read-only view** of its own marks sheet.
 - Searches the read-only view by roll number, student name, father’s name, or admission number.
 - Provides **Print sheet** and **CSV** options for the school’s marks table.
 - Shows a **live countdown** to the marks-entry deadline and disables entry automatically once it passes.
 - Clearly states that official report cards are issued by DIET.
+
+## School access passwords
+
+Each school has its own access password. Only a salted, iterated SHA-256 hash is
+stored in the repository — the passwords themselves are never committed.
+
+- A school enters its password on its card, or on its direct page
+  (`#/school/<slug>`), to unlock that school for the browser session.
+- A password unlocks **only its own school**. Opening another school’s card or
+  page shows a locked screen and fetches nothing.
+- The header shows **Sign out** while any school is unlocked; signing out locks
+  everything and clears cached sheet data.
+- A separate **complex-head master password** opens every school. Keep it with
+  the complex head only.
+- Unlocks last 8 hours in the tab. “Keep me signed in on this device” extends
+  that to 7 days.
+- Six wrong attempts lock that school’s password prompt for 60 seconds.
+
+Passwords are distributed separately by the complex head. They are not listed
+in this repository or on the website.
+
+### Changing or resetting a password
+
+1. Open `tools/make-password.html` in a browser (no server needed).
+2. Generate a password, then copy the `access: { … }` snippet.
+3. Replace that school’s `access` block in `assets/js/schools.js`.
+4. Deploy. The old password stops working immediately; hand the new one to that
+   school only.
+
+To change the master password, edit `window.COMPLEX_ACCESS.admin` in
+`assets/js/schools.js` using the same tool.
+
+### Important limit of a static site
+
+This site runs entirely in the browser (GitHub Pages has no server). The
+password gate:
+
+- **does** stop visitors and other schools from browsing or entering another
+  school’s data through the portal, and keeps sheet IDs out of the page until a
+  school is unlocked;
+- **does not** stop a determined technical user who reads the JavaScript, because
+  the sheet IDs and hashes are in the published files, and the Google Sheets
+  themselves are still reachable at their own URLs.
+
+For real protection, also restrict each Google Sheet’s sharing settings so only
+that school’s Google account can edit it. If a sheet is set to “anyone with the
+link can edit”, no website can prevent editing. Note that the portal’s read-only
+view needs the sheet to remain readable by link; if you remove public read
+access, the portal can no longer display that school’s rows.
 
 ## Project structure
 
@@ -29,6 +79,8 @@ complexhead/
 ├── index.html
 ├── .nojekyll
 ├── README.md
+├── tools/
+│   └── make-password.html
 └── assets/
     ├── css/
     │   └── styles.css
@@ -38,6 +90,7 @@ complexhead/
     │   └── crest.svg
     └── js/
         ├── app.js
+        ├── auth.js
         └── schools.js
 ```
 
@@ -45,7 +98,7 @@ There is no build step, package manager, or framework. Open `index.html` or serv
 
 ## How the data works
 
-The site reads the first sheet in each Google Sheet through Google’s public CSV endpoint:
+The site reads the first sheet in each Google Sheet through Google’s public CSV endpoint, but only after that school’s password has been entered:
 
 ```text
 https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv
@@ -105,9 +158,17 @@ Each `schools.js` entry looks like this:
   group: 'govt',
   monogram: 'GH',
   accent: '#0c6b52',
-  sheetId: '1CEncoVVMl_vy8L_4CMDod-lraZP4vfvRuFBWi6PsoWI'
+  sheetId: '1CEncoVVMl_vy8L_4CMDod-lraZP4vfvRuFBWi6PsoWI',
+  access: {
+    salt: 'ec968a7c5413db84',
+    hash: '3a5a63c7…'   // salted, iterated SHA-256 of the school password
+  }
 }
 ```
+
+The `access` block is what protects the school. Do not paste a plain-text
+password into this file — generate the salt and hash with
+`tools/make-password.html` instead.
 
 To change a sheet, replace `sheetId` with the ID from the school’s Google Sheet URL:
 
@@ -180,11 +241,17 @@ The Google Sheets are reused every academic year. Before the new session:
 
 ## Notes
 
-- No cookies, analytics, or backend are used.
-- The site reads the sheets directly in the browser. Google Sheets must allow public read access.
+- No cookies, analytics, or backend are used. Unlock state is kept in
+  `sessionStorage` (or `localStorage` if “keep me signed in” is ticked) and
+  contains only school slugs and expiry times — never passwords.
+- The site reads the sheets directly in the browser. Google Sheets must allow
+  public read access for the read-only view to work; keep edit access limited to
+  the owning school.
 - The website does not modify the Google Sheets. School staff edit the sheets directly in Google Sheets.
 - The **Print sheet** action prints the tabular school marks sheet. It does not generate an individual report card.
 - Official report cards are issued by DIET.
+- The static password gate is a privacy barrier, not server-grade security. See
+  “Important limit of a static site” above.
 
 ## Developer
 

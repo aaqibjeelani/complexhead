@@ -3,9 +3,16 @@
   'use strict';
 
   const SCHOOLS = Array.isArray(window.COMPLEX_SCHOOLS) ? window.COMPLEX_SCHOOLS : [];
+  const AUTH = window.COMPLEX_AUTH || null;
   const SUBJECTS = ['English', 'Mathematics', 'Science', 'Social Science', 'Urdu', 'Kashmiri'];
   const SESSION_YEAR = (window.COMPLEX_SESSION || '2026').trim();
   const ENTRY_DEADLINE = (window.ENTRY_DEADLINE || '2026-10-31').trim();
+
+  /* Fail closed: a school's data is shown only when its access password
+     has been entered in this browser session. */
+  function isUnlocked(school) {
+    return Boolean(AUTH && school && AUTH.isUnlocked(school.slug));
+  }
 
   function isEntryOpen() {
     const end = new Date(ENTRY_DEADLINE + 'T23:59:59');
@@ -384,18 +391,34 @@
   function schoolCard(school) {
     const viewUrl = '#/school/' + school.slug;
     const editUrl = sheetEditUrl(school);
-    const enterAction = editUrl
-      ? (isEntryOpen() ? '<a class="school-card__enter" href="' + esc(editUrl) + '" target="_blank" rel="noopener" aria-label="Enter or update marks for ' + esc(school.name) + ' in Google Sheets">' +
-          '<svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg> Enter marks' +
-        '</a>' : '<span class="school-card__enter school-card__enter--disabled" aria-disabled="true" title="Marks entry closed on ' + esc(entryDeadlineLong()) + '"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg> Entry closed</span>')
-      : '<span class="school-card__enter school-card__enter--disabled" aria-disabled="true" title="Google Sheet link pending">' +
-          '<svg class="icon" aria-hidden="true"><use href="#i-info"/></svg> Link pending' +
-        '</span>';
+    const unlocked = isUnlocked(school);
+
+    let enterAction;
+    if (!unlocked) {
+      enterAction = '<button class="school-card__enter school-card__enter--locked" type="button" data-unlock="' + esc(school.slug) + '" data-intent="enter" aria-label="Enter the access password for ' + esc(school.name) + '">' +
+        '<svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg> Enter password' +
+      '</button>';
+    } else if (editUrl) {
+      enterAction = isEntryOpen()
+        ? '<a class="school-card__enter" href="' + esc(editUrl) + '" target="_blank" rel="noopener" aria-label="Enter or update marks for ' + esc(school.name) + ' in Google Sheets">' +
+            '<svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg> Enter marks' +
+          '</a>'
+        : '<span class="school-card__enter school-card__enter--disabled" aria-disabled="true" title="Marks entry closed on ' + esc(entryDeadlineLong()) + '"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg> Entry closed</span>';
+    } else {
+      enterAction = '<span class="school-card__enter school-card__enter--disabled" aria-disabled="true" title="Google Sheet link pending">' +
+        '<svg class="icon" aria-hidden="true"><use href="#i-info"/></svg> Link pending' +
+      '</span>';
+    }
+
+    const lockBadge = unlocked ? '' :
+      '<span class="school-card__lock" title="Password protected" aria-hidden="true"><svg class="icon"><use href="#i-lock"/></svg></span>';
+
     return '' +
-      '<article class="school-card" style="--accent:' + esc(school.accent) + '">' +
+      '<article class="school-card' + (unlocked ? '' : ' school-card--locked') + '" style="--accent:' + esc(school.accent) + '">' +
         '<div class="school-card__top">' +
           '<span class="school-card__monogram" aria-hidden="true">' + esc(school.monogram) + '</span>' +
           '<span class="school-card__type">' + (school.group === 'govt' ? 'Govt.' : 'Private') + '</span>' +
+          lockBadge +
           '<a class="school-card__arrow" href="' + esc(viewUrl) + '" aria-label="View the result sheet for ' + esc(school.name) + '"><svg class="icon"><use href="#i-arrow"/></svg></a>' +
         '</div>' +
         '<h3><a class="school-card__title" href="' + esc(viewUrl) + '">' + esc(school.name) + '</a></h3>' +
@@ -467,6 +490,19 @@
         renderSchools();
       });
     }
+    const finder = $('#finder');
+    if (finder) {
+      finder.addEventListener('click', function (event) {
+        const trigger = event.target.closest('[data-unlock]');
+        if (!trigger) return;
+        event.preventDefault();
+        if (!AUTH) {
+          toast('Access control could not load. Please reload the page.');
+          return;
+        }
+        AUTH.open(trigger.getAttribute('data-unlock'), trigger.getAttribute('data-intent') || 'enter');
+      });
+    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -513,6 +549,21 @@
         return;
       }
 
+      if (!isUnlocked(school)) {
+        state.activeSchool = school;
+        state.students = [];
+        state.rawCsv = '';
+        state.fetchedAt = null;
+        state.error = '';
+        state.loading = false;
+        state.sheetPending = false;
+        showResultsView();
+        renderResults();
+        updateTitle();
+        window.scrollTo(0, 0);
+        return;
+      }
+
       const isNewSchool = !state.activeSchool || state.activeSchool.slug !== school.slug;
 
       if (isNewSchool) {
@@ -553,6 +604,18 @@
   }
 
   async function loadSchool(school, force) {
+    if (!isUnlocked(school)) {
+      state.students = [];
+      state.rawCsv = '';
+      state.fetchedAt = null;
+      state.loading = false;
+      state.error = '';
+      state.sheetPending = false;
+      renderResults();
+      updateTitle();
+      return;
+    }
+
     if (!school.sheetId) {
       state.students = [];
       state.rawCsv = '';
@@ -677,17 +740,24 @@
   function renderSchoolBanner() {
     const school = state.activeSchool;
     if (!school) return '';
-    const status = statusInfo();
+    const unlocked = isUnlocked(school);
+    const status = unlocked ? statusInfo() : { tone: 'locked', label: 'Password protected' };
     let count = '';
-    if (!state.loading && !state.error && state.students.length) {
+    if (unlocked && !state.loading && !state.error && state.students.length) {
       count = '<span class="school-banner__count"><strong>' + state.students.length + '</strong> student marks</span>';
     }
     const editUrl = sheetEditUrl(school);
-    const editLink = editUrl
-      ? (isEntryOpen() ? '<a class="btn btn--light btn--sm school-banner__edit" href="' + esc(editUrl) + '" target="_blank" rel="noopener">' +
-        '<svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg> Enter / update marks' +
-        '<svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a>' : '<span class="btn btn--light btn--sm school-banner__edit is-disabled" aria-disabled="true" title="Marks entry closed on ' + esc(entryDeadlineLong()) + '"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg> Entry closed</span>')
-      : '';
+    let editLink = '';
+    if (!unlocked) {
+      editLink = '<button class="btn btn--light btn--sm school-banner__edit" type="button" data-action="unlock">' +
+        '<svg class="icon" aria-hidden="true"><use href="#i-key"/></svg> Enter password</button>';
+    } else if (editUrl) {
+      editLink = isEntryOpen()
+        ? '<a class="btn btn--light btn--sm school-banner__edit" href="' + esc(editUrl) + '" target="_blank" rel="noopener">' +
+            '<svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg> Enter / update marks' +
+            '<svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a>'
+        : '<span class="btn btn--light btn--sm school-banner__edit is-disabled" aria-disabled="true" title="Marks entry closed on ' + esc(entryDeadlineLong()) + '"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg> Entry closed</span>';
+    }
 
     return '' +
       '<section class="school-banner" style="--accent:' + esc(school.accent) + '">' +
@@ -702,7 +772,9 @@
         '<div class="school-banner__meta">' +
           '<span class="status-pill status-pill--' + status.tone + '"><span class="status-pill__dot" aria-hidden="true"></span>' + status.label + '</span>' +
           count +
-          '<span class="school-banner__deadline"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg> Entry closes ' + esc(entryDeadlineLong()) + '</span>' +
+          (unlocked
+            ? '<span class="school-banner__deadline"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg> Entry closes ' + esc(entryDeadlineLong()) + '</span>'
+            : '<span class="school-banner__deadline"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg> Password required</span>') +
           editLink +
         '</div>' +
       '</section>';
@@ -714,7 +786,9 @@
     if (!container || !school) return;
 
     let body = '';
-    if (state.sheetPending) {
+    if (!isUnlocked(school)) {
+      body = renderLocked();
+    } else if (state.sheetPending) {
       body = renderSheetPending();
     } else if (state.loading) {
       body = renderLoading();
@@ -729,6 +803,30 @@
     container.innerHTML = renderCrumbs() +
       renderSchoolBanner() +
       body;
+  }
+
+  function renderLocked() {
+    const school = state.activeSchool;
+    return '' +
+      '<div class="state-card state-card--locked">' +
+        '<div class="state-illustration" aria-hidden="true">' +
+          '<svg viewBox="0 0 120 120" fill="none">' +
+            '<circle cx="60" cy="60" r="52" fill="#f3ead9"/>' +
+            '<rect x="34" y="52" width="52" height="40" rx="9" fill="#fffdf9" stroke="#8a6a2f" stroke-width="2.5"/>' +
+            '<path d="M45 52V43a15 15 0 0 1 30 0v9" stroke="#8a6a2f" stroke-width="2.5" stroke-linecap="round"/>' +
+            '<circle cx="60" cy="70" r="4" fill="#8a6a2f"/>' +
+            '<path d="M60 74v7" stroke="#8a6a2f" stroke-width="2.5" stroke-linecap="round"/>' +
+          '</svg>' +
+        '</div>' +
+        '<span class="state-badge">Protected sheet</span>' +
+        '<h2>This school’s sheet is password protected</h2>' +
+        '<p>Enter the access password issued to <strong>' + esc(school.name) + '</strong> to open its read-only view and the marks entry link. Each school has its own password, and no password opens another school’s records.</p>' +
+        '<div class="state-actions">' +
+          '<button class="btn btn--primary" type="button" data-action="unlock"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg> Enter password</button>' +
+          '<a class="btn btn--ghost" href="#finder">All schools</a>' +
+        '</div>' +
+        '<p class="state-note">Forgotten the password? Contact the complex head at BHSS Hazratbal — passwords can be reset, but they are never shown on this website.</p>' +
+      '</div>';
   }
 
   function renderLoading() {
@@ -984,6 +1082,9 @@
       if (action === 'refresh' || action === 'retry') reloadSchool();
       if (action === 'download') downloadCsv();
       if (action === 'print-sheet') window.print();
+      if (action === 'unlock' && state.activeSchool && AUTH) {
+        AUTH.open(state.activeSchool.slug, 'view');
+      }
     });
 
     container.addEventListener('input', function (event) {
@@ -999,6 +1100,68 @@
         updateStudentList();
       }
     });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Access changes                                                     */
+  /* ------------------------------------------------------------------ */
+
+  function updateSignOut() {
+    const button = $('#signOutBtn');
+    if (!button) return;
+    const unlockedAny = Boolean(AUTH) && SCHOOLS.some(function (school) {
+      return AUTH.isUnlocked(school.slug);
+    });
+    button.hidden = !unlockedAny;
+    button.title = AUTH && AUTH.isAdminSession()
+      ? 'Signed in as complex head — click to lock every school'
+      : 'Lock all school sheets on this device';
+  }
+
+  function handleAccessChange(detail) {
+    const info = detail || {};
+    updateSignOut();
+    renderSchools();
+
+    if (info.type === 'lock') {
+      cache.clear();
+      if (state.activeSchool) {
+        state.students = [];
+        state.rawCsv = '';
+        state.fetchedAt = null;
+        state.error = '';
+        state.loading = false;
+        state.sheetPending = false;
+        renderResults();
+        updateTitle();
+      }
+      return;
+    }
+
+    if (info.type === 'unlock') {
+      const onActiveSheet = Boolean(state.activeSchool) &&
+        state.activeSchool.slug === info.slug &&
+        document.body.classList.contains('is-results');
+
+      if (onActiveSheet) {
+        state.students = [];
+        state.rawCsv = '';
+        state.fetchedAt = null;
+        state.error = '';
+        state.loading = true;
+        state.sheetPending = false;
+        renderResults();
+        loadSchool(state.activeSchool, false);
+      } else if (info.intent === 'view') {
+        window.location.hash = '#/school/' + encodeURIComponent(info.slug);
+      }
+
+      if (info.admin) {
+        toast('Complex head access granted for this session.');
+      } else if (!onActiveSheet && info.intent !== 'view') {
+        toast('Unlocked. Choose Enter marks to open the Google Sheet.');
+      }
+    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -1046,6 +1209,15 @@
     if (nav) {
       nav.addEventListener('click', function (event) {
         if (event.target.closest('a')) closeNav();
+      });
+    }
+
+    const signOut = $('#signOutBtn');
+    if (signOut) {
+      signOut.addEventListener('click', function () {
+        if (!AUTH) return;
+        AUTH.lockAll();
+        toast('Signed out. All school sheets are locked.');
       });
     }
 
@@ -1150,6 +1322,8 @@
     bindSchoolFinder();
     bindHeader();
     bindResultEvents();
+    if (AUTH) AUTH.onChange(handleAccessChange);
+    updateSignOut();
     handleRoute();
     window.addEventListener('hashchange', handleRoute);
   }

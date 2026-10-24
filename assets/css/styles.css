@@ -3119,6 +3119,288 @@ body.nav-open .nav-toggle__close {
 }
 
 /* --------------------------------------------------------------------------
+   School access (password gate)
+   -------------------------------------------------------------------------- */
+
+.header__lock {
+  flex: none;
+}
+
+.header__lock .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.school-card__enter {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.school-card__lock {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--gold-soft);
+  color: var(--gold-ink);
+}
+
+.school-card__lock .icon {
+  width: 12px;
+  height: 12px;
+}
+
+.school-card__enter--locked {
+  border: 1px dashed color-mix(in srgb, var(--brand) 38%, transparent);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.school-card__enter--locked:hover {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+}
+
+.status-pill--locked .status-pill__dot {
+  background: #f0c987;
+  box-shadow: 0 0 0 3px rgba(240, 201, 135, 0.16);
+}
+
+.state-card--locked {
+  border-color: color-mix(in srgb, var(--gold) 42%, transparent);
+}
+
+.access-dialog {
+  width: min(100% - 32px, 468px);
+  max-width: 468px;
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+}
+
+.access-dialog::backdrop {
+  background: rgba(7, 34, 27, 0.64);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.access-dialog--fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 34, 27, 0.64);
+}
+
+.access-dialog__card {
+  position: relative;
+  padding: 32px 30px 26px;
+  text-align: center;
+}
+
+.access-dialog__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.access-dialog__close:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.access-dialog__close .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.access-dialog__badge {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 18px;
+  background: var(--gold-soft);
+  color: var(--gold-ink);
+}
+
+.access-dialog__badge .icon {
+  width: 26px;
+  height: 26px;
+}
+
+.access-dialog .eyebrow {
+  justify-content: center;
+}
+
+.access-dialog h2 {
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 4vw, 1.7rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.access-dialog__school {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.access-dialog__note {
+  max-width: 40ch;
+  margin: 14px auto 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.62;
+}
+
+.access-field {
+  display: block;
+  margin-top: 20px;
+  text-align: left;
+}
+
+.access-field > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.access-field input {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.access-field input::placeholder {
+  color: var(--muted-2);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.access-field input:focus {
+  outline: none;
+  border-color: var(--brand);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(11, 92, 72, 0.14);
+}
+
+.access-error {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #fbe8e3;
+  color: #9d3524;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.access-remember {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+
+.access-remember input {
+  margin-top: 2px;
+  accent-color: var(--brand);
+}
+
+.access-dialog__actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.access-dialog__actions .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+.access-dialog__hint {
+  margin-top: 16px;
+  color: var(--muted-2);
+  font-size: 0.66rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 560px) {
+  .header__lock {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  .header__lock-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .access-dialog__card {
+    padding: 28px 22px 22px;
+  }
+
+  .access-dialog__actions {
+    flex-direction: column;
+  }
+}
+
+@media print {
+  .access-dialog {
+    display: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Toast & noscript
    -------------------------------------------------------------------------- */
 
