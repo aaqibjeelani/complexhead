@@ -174,8 +174,8 @@ window.COMPLEX_SCHOOLS = [
     accent: '#35558c',
     sheetId: '1VgQ3wygnRatX2HwZ03V8D7ZwJq7A4cT-8kD329u2k2M',
     access: {
-      salt: '41b0742941053cf6',
-      hash: '7e69de9c8bc832d1e65d2d82450597f2a7b0b5e5e2138f53934ac4d7ba8f5740'
+      salt: 'd5af349ff2798201',
+      hash: '68d38c717637a3faae4709773e2fdaba1a494d73e9ce2ccdf4b01f536590df2f'
     }
   },
   {

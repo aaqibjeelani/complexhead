@@ -47,9 +47,31 @@ in this repository or on the website.
 
 1. Open `tools/make-password.html` in a browser (no server needed).
 2. Generate a password, then copy the `access: { … }` snippet.
-3. Replace that school’s `access` block in `assets/js/schools.js`.
-4. Deploy. The old password stops working immediately; hand the new one to that
-   school only.
+3. Replace that school's `access` block in `assets/js/schools.js`.
+4. Bump the cache version shown in step 5, then deploy. The old password stops
+   working immediately; hand the new one to that school only.
+
+5. **Bump the cache version.** `index.html` loads the three scripts with a
+   version suffix:
+
+   ```html
+   <script src="assets/js/schools.js?v=20261027"></script>
+   <script src="assets/js/auth.js?v=20261027"></script>
+   <script src="assets/js/app.js?v=20261027"></script>
+   ```
+
+   Change `20261027` to today's date in **both** `index.html` and
+   `tools/make-password.html` whenever you deploy a password or script change.
+   Browsers then fetch the new files straight away and nobody has to clear
+   their cache. Without the bump, a school can keep seeing the previous
+   password check for as long as the browser (or GitHub Pages, ~10 minutes)
+   caches the old `schools.js`.
+
+Old unlock sessions are handled for you: the browser storage keys include a
+fingerprint of every password hash, so changing any password silently retires
+the unlocks and lockout counters created by the previous one. A school that
+was signed in with the old password is asked for a password again on its next
+visit — no “clear cookies” instructions needed.
 
 To change the master password, edit `window.COMPLEX_ACCESS.admin` in
 `assets/js/schools.js` using the same tool.

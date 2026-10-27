@@ -24,12 +24,45 @@ window.COMPLEX_AUTH = (function () {
   const MAX_ATTEMPTS = 6;
   const LOCKOUT_MS = 60 * 1000;
 
-  const SESSION_KEY = 'complexhead.access.session.v1';
-  const REMEMBER_KEY = 'complexhead.access.remember.v1';
-  const ATTEMPTS_KEY = 'complexhead.access.attempts.v1';
-
   const SCHOOLS = Array.isArray(window.COMPLEX_SCHOOLS) ? window.COMPLEX_SCHOOLS : [];
   const listeners = [];
+
+  /*
+   * Storage namespace.
+   *
+   * The suffix is a short fingerprint of every password hash in the project.
+   * When a school password (or the master password) is changed, the suffix
+   * changes with it, so unlocks and lockout counters saved by the previous
+   * password are ignored instead of quietly keeping a browser signed in.
+   * Nothing manual to bump — see pruneStaleSessionData() for the cleanup.
+   */
+  function accessFingerprint() {
+    const parts = SCHOOLS.map(function (school) {
+      const access = (school && school.access) || {};
+      return String(school.slug) + ':' + String(access.salt || '') + ':' + String(access.hash || '');
+    });
+    const admin = CONFIG.admin || {};
+    parts.push('admin:' + String(admin.salt || '') + ':' + String(admin.hash || ''));
+    parts.push('iterations:' + ITERATIONS);
+    return fnv1a(parts.join('|'));
+  }
+
+  /* FNV-1a, 32-bit. Only used to name storage keys, not for security. */
+  function fnv1a(value) {
+    let hash = 0x811c9dc5;
+    const text = String(value);
+    for (let i = 0; i < text.length; i += 1) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+    }
+    return ('0000000' + (hash >>> 0).toString(16)).slice(-8);
+  }
+
+  const NAMESPACE = 'complexhead.access.v1.' + accessFingerprint();
+
+  const SESSION_KEY = NAMESPACE + '.session';
+  const REMEMBER_KEY = NAMESPACE + '.remember';
+  const ATTEMPTS_KEY = NAMESPACE + '.attempts';
 
   /* ------------------------------------------------------------------ */
   /* SHA-256 (small dependency-free implementation)                     */
@@ -209,6 +242,32 @@ window.COMPLEX_AUTH = (function () {
 
   function persistStore() {
     try { return window.localStorage; } catch (error) { return null; }
+  }
+
+  /*
+   * Removes grants and lockout records left behind by an older password.
+   * They are already ignored because of the NAMESPACE suffix above; this
+   * just keeps the browser storage tidy.
+   */
+  function pruneStaleSessionData() {
+    const keep = [SESSION_KEY, REMEMBER_KEY, ATTEMPTS_KEY];
+    [sessionStore(), persistStore()].forEach(function (store) {
+      if (!store) return;
+      try {
+        const stale = [];
+        for (let i = 0; i < store.length; i += 1) {
+          const key = store.key(i);
+          if (key && key.indexOf('complexhead.access.') === 0 && keep.indexOf(key) === -1) {
+            stale.push(key);
+          }
+        }
+        stale.forEach(function (key) {
+          try { store.removeItem(key); } catch (error) { /* ignore */ }
+        });
+      } catch (error) {
+        /* storage disabled */
+      }
+    });
   }
 
   function readGrants() {
@@ -547,6 +606,8 @@ window.COMPLEX_AUTH = (function () {
   /* ------------------------------------------------------------------ */
   /* Public API                                                         */
   /* ------------------------------------------------------------------ */
+
+  pruneStaleSessionData();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initDialog);
